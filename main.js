@@ -21,7 +21,6 @@ methods.set('/posts.getById', function ({ res, searchParams }) {
     }
 
     const foundPost = posts.find(post => post.id === id);
-
     if (!foundPost) {
         sendResponse(res, { status: statusNotFound });
         return;
@@ -45,7 +44,30 @@ methods.set('/posts.post', function ({ res, searchParams }) {
     posts.unshift(post);
     sendJSON(res, post);
 });
-methods.set('/posts.edit', function () { });
+methods.set('/posts.edit', function ({ res, searchParams }) {
+    if (!searchParams.has('id') || !searchParams.has('content')) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const id = Number(searchParams.get('id'));
+    const newContent = searchParams.get('content');
+
+    if (Number.isNaN(id) || !newContent) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const postIndex = posts.findIndex(post => post.id === id);
+
+    if (postIndex === -1) {
+        sendResponse(res, { status: statusNotFound });
+        return;
+    }
+
+    posts[postIndex].content = newContent;
+    sendJSON(res, posts[postIndex]);
+});
 methods.set('/posts.delete', function () { });
 
 function sendResponse(res, { status = statusOk, headers = {}, body = null }) {
