@@ -1,5 +1,4 @@
 'use strict';
-const { write } = require('node:fs');
 const http = require('node:http');
 
 const port = 9999;
@@ -14,7 +13,22 @@ const methods = new Map();
 methods.set('/posts.get', function ({ res }) {
     sendJSON(res, posts);
 });
-methods.set('/posts.getById', function () { });
+methods.set('/posts.getById', function ({ res, searchParams }) {
+    const id = Number(searchParams.get('id'));
+    if (Number.isNaN(id)) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const foundPost = posts.find(post => post.id === id);
+
+    if (!foundPost) {
+        sendResponse(res, { status: statusNotFound });
+        return;
+    }
+
+    sendJSON(res, foundPost);
+});
 methods.set('/posts.post', function ({ res, searchParams }) {
     if (!searchParams.has('content')) {
         sendResponse(res, { status: statusBadRequest });
@@ -36,7 +50,7 @@ methods.set('/posts.delete', function () { });
 
 function sendResponse(res, { status = statusOk, headers = {}, body = null }) {
     Object.entries(headers).forEach(function ([key, value]) {
-        res.writeHeader(key, value);
+        res.setHeader(key, value);
     });
     res.writeHead(status);
     res.end(body);
@@ -48,7 +62,7 @@ function sendJSON(res, body) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
-    })
+    });
 }
 
 const server = http.createServer((req, res) => {
@@ -65,7 +79,7 @@ const server = http.createServer((req, res) => {
         res,
         pathname,
         searchParams,
-    }
+    };
 
     method(params);
 });
