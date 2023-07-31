@@ -11,49 +11,89 @@ const posts = [];
 
 const methods = new Map();
 methods.set('/posts.get', function ({ res }) {
-    sendJSON(res, posts);
+    sendJSON(res, posts.filter(post => post.removed === false));
 });
 methods.set('/posts.getById', function ({ res, searchParams }) {
-    const id = getId(searchParams);
-    const postIndex = getPostIndex(id);
+    try {
+        const id = getId(searchParams);
+        const foundById = getPost(res, id);
 
-    sendJSON(res, posts[postIndex]);
+        sendJSON(res, foundById);
+    } catch (getByIdError) {
+        handleError(res, getByIdError);
+    }
 });
 methods.set('/posts.post', function ({ res, searchParams }) {
-    const content = getContent(searchParams);
+    try {
+        const content = getContent(searchParams);
 
-    const post = {
-        id: nextId++,
-        content: content,
-        created: Date.now(),
-    };
+        const post = {
+            id: nextId++,
+            content: content,
+            removed: false,
+            created: Date.now(),
+        };
 
-    posts.unshift(post);
-    sendJSON(res, post);
+        posts.unshift(post);
+        sendJSON(res, post);
+    } catch (postError) {
+        handleError(res, postError);
+    }
 });
 methods.set('/posts.edit', function ({ res, searchParams }) {
-    const id = getId(searchParams);
-    const newContent = getContent(searchParams);
-    const postIndex = getPostIndex(id);
+    try {
+        const id = getId(searchParams);
+        const newContent = getContent(searchParams);
+        const postToEdit = getPost(res, id);
 
-    posts[postIndex].content = newContent;
-    sendJSON(res, posts[postIndex]);
+        postToEdit.content = newContent;
+        sendJSON(res, postToEdit);
+    } catch (editError) {
+        handleError(res, editError);
+    }
 });
 methods.set('/posts.delete', function ({ res, searchParams }) {
-    const id = getId(searchParams);
-    const postIndex = getPostIndex(id);
+    try {
+        const id = getId(searchParams);
+        const postToDelete = getPost(res, id);
 
-    const deletedPost = posts[postIndex];
-    posts.splice(postIndex, 1);
+        postToDelete.removed = true;
 
-    sendJSON(res, deletedPost);
+        sendJSON(res, postToDelete);
+    } catch (deleteError) {
+        handleError(res, deleteError);
+    }
 });
+
+function handleError(res, error) {
+    switch (error.message) {
+        case 'statusBadRequest':
+            sendResponse(res, { status: statusBadRequest });
+            break;
+        case 'statusNotFound':
+            sendResponse(res, { status: statusNotFound });
+            break;
+
+        default:
+            break;
+    }
+}
+
+function getPost(id) {
+    const postIndex = getPostIndex( id);
+    const post = posts[postIndex];
+
+    if (post.removed === true) {
+        throw new Error('statusNotFound');
+    }
+
+    return post;
+}
 
 function getPostIndex(id) {
     const postIndex = posts.findIndex(post => post.id === id);
     if (postIndex === -1) {
-        sendResponse(res, { status: statusNotFound });
-        return;
+        throw new Error('statusNotFound');
     }
 
     return postIndex;
@@ -61,14 +101,12 @@ function getPostIndex(id) {
 
 function getContent(params) {
     if (!params.has('content')) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
+        throw new Error('statusBadRequest');
     }
 
     const content = params.get('content');
     if (!content) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
+        throw new Error('statusBadRequest');
     }
 
     return content;
@@ -76,14 +114,12 @@ function getContent(params) {
 
 function getId(params) {
     if (!params.has('id')) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
+        throw new Error('statusBadRequest');
     }
 
     const id = Number(params.get('id'));
     if (Number.isNaN(id)) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
+        throw new Error('statusBadRequest');
     }
 
     return id;
