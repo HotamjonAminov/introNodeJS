@@ -1,4 +1,5 @@
 'use strict';
+const { write } = require('node:fs');
 const http = require('node:http');
 
 const port = 9999;
@@ -11,14 +12,12 @@ const posts = [];
 
 const methods = new Map();
 methods.set('/posts.get', function ({ res }) {
-    res.writeHead(statusOk, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(posts));
+    sendJSON(res, posts);
 });
 methods.set('/posts.getById', function () { });
 methods.set('/posts.post', function ({ res, searchParams }) {
     if (!searchParams.has('content')) {
-        res.writeHead(statusBadRequest);
-        res.end();
+        sendResponse(res, { status: statusBadRequest });
         return;
     }
 
@@ -30,19 +29,34 @@ methods.set('/posts.post', function ({ res, searchParams }) {
     };
 
     posts.unshift(post);
-    res.writeHead(statusOk, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(post));
+    sendJSON(res, post);
 });
 methods.set('/posts.edit', function () { });
 methods.set('/posts.delete', function () { });
+
+function sendResponse(res, { status = statusOk, headers = {}, body = null }) {
+    Object.entries(headers).forEach(function ([key, value]) {
+        res.writeHeader(key, value);
+    });
+    res.writeHead(status);
+    res.end(body);
+}
+
+function sendJSON(res, body) {
+    sendResponse(res, {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    })
+}
 
 const server = http.createServer((req, res) => {
     const { pathname, searchParams } = new URL(req.url, `http://${req.headers.host}`);
 
     const method = methods.get(pathname);
     if (method === undefined) {
-        res.writeHead(statusNotFound);
-        res.end();
+        sendResponse(res, { status: statusNotFound });
         return;
     }
 
