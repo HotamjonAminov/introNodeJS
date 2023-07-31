@@ -10,15 +10,12 @@ let nextId = 1;
 const posts = [];
 
 const methods = new Map();
-methods.set('/posts.get', function(req, res) {
-    res.writeHead(statusOk, {'Content-Type': 'application/json'});
+methods.set('/posts.get', function ({ res }) {
+    res.writeHead(statusOk, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(posts));
 });
-methods.set('/posts.getById', function(req, res) {});
-methods.set('/posts.post', function(req, res) {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const searchParams = url.searchParams;
-
+methods.set('/posts.getById', function () { });
+methods.set('/posts.post', function ({ res, searchParams }) {
     if (!searchParams.has('content')) {
         res.writeHead(statusBadRequest);
         res.end();
@@ -26,7 +23,6 @@ methods.set('/posts.post', function(req, res) {
     }
 
     const content = searchParams.get('content');
-
     const post = {
         id: nextId++,
         content: content,
@@ -34,17 +30,14 @@ methods.set('/posts.post', function(req, res) {
     };
 
     posts.unshift(post);
-    res.writeHead(statusOk, {'Content-Type': 'application/json'});
+    res.writeHead(statusOk, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(post));
 });
-methods.set('/posts.edit', function(req, res) {});
-methods.set('/posts.delete', function(req, res) {});
+methods.set('/posts.edit', function () { });
+methods.set('/posts.delete', function () { });
 
-const server = http.createServer((req, res) => {    
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    
-    const pathname = url.pathname;
-    const searchParams = url.searchParams;
+const server = http.createServer((req, res) => {
+    const { pathname, searchParams } = new URL(req.url, `http://${req.headers.host}`);
 
     const method = methods.get(pathname);
     if (method === undefined) {
@@ -53,7 +46,14 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    method(req, res);
+    const params = {
+        req,
+        res,
+        pathname,
+        searchParams,
+    }
+
+    method(params);
 });
 
 server.listen(port);
