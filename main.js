@@ -16,7 +16,7 @@ methods.set('/posts.get', function ({ res }) {
 methods.set('/posts.getById', function ({ res, searchParams }) {
     try {
         const id = getId(searchParams);
-        const foundById = getPost(res, id);
+        const foundById = getPost(id);
 
         sendJSON(res, foundById);
     } catch (getByIdError) {
@@ -44,7 +44,7 @@ methods.set('/posts.edit', function ({ res, searchParams }) {
     try {
         const id = getId(searchParams);
         const newContent = getContent(searchParams);
-        const postToEdit = getPost(res, id);
+        const postToEdit = getPost(id);
 
         postToEdit.content = newContent;
         sendJSON(res, postToEdit);
@@ -55,11 +55,27 @@ methods.set('/posts.edit', function ({ res, searchParams }) {
 methods.set('/posts.delete', function ({ res, searchParams }) {
     try {
         const id = getId(searchParams);
-        const postToDelete = getPost(res, id);
+        const postToDelete = getPost(id);
 
         postToDelete.removed = true;
 
         sendJSON(res, postToDelete);
+    } catch (deleteError) {
+        handleError(res, deleteError);
+    }
+});
+methods.set('/posts.restore', function ({ res, searchParams }) {
+    try {
+        const id = getId(searchParams);
+        const postIndex = getPostIndex(id);
+
+        if (posts[postIndex].removed === false) {
+            throw new Error('statusBadRequest');
+        }
+
+        posts[postIndex].removed = false;
+
+        sendJSON(res, posts[postIndex]);
     } catch (deleteError) {
         handleError(res, deleteError);
     }
@@ -80,7 +96,7 @@ function handleError(res, error) {
 }
 
 function getPost(id) {
-    const postIndex = getPostIndex( id);
+    const postIndex = getPostIndex(id);
     const post = posts[postIndex];
 
     if (post.removed === true) {
