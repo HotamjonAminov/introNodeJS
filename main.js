@@ -14,13 +14,13 @@ methods.set('/posts.get', function ({ res }) {
     sendJSON(res, posts);
 });
 methods.set('/posts.getById', function ({ res, searchParams }) {
-    const id = hasId(searchParams);
-    const postIndex = hasPost(id);
+    const id = getId(searchParams);
+    const postIndex = getPostIndex(id);
 
     sendJSON(res, posts[postIndex]);
 });
 methods.set('/posts.post', function ({ res, searchParams }) {
-    const content = hasContent(searchParams);
+    const content = getContent(searchParams);
 
     const post = {
         id: nextId++,
@@ -32,16 +32,16 @@ methods.set('/posts.post', function ({ res, searchParams }) {
     sendJSON(res, post);
 });
 methods.set('/posts.edit', function ({ res, searchParams }) {
-    const id = hasId(searchParams);
-    const newContent = hasContent(searchParams);
-    const postIndex = hasPost(id);
+    const id = getId(searchParams);
+    const newContent = getContent(searchParams);
+    const postIndex = getPostIndex(id);
 
     posts[postIndex].content = newContent;
     sendJSON(res, posts[postIndex]);
 });
 methods.set('/posts.delete', function ({ res, searchParams }) {
-    const id = hasId(searchParams);
-    const postIndex = hasPost(id);
+    const id = getId(searchParams);
+    const postIndex = getPostIndex(id);
 
     const deletedPost = posts[postIndex];
     posts.splice(postIndex, 1);
@@ -49,7 +49,7 @@ methods.set('/posts.delete', function ({ res, searchParams }) {
     sendJSON(res, deletedPost);
 });
 
-function hasPost(id) {
+function getPostIndex(id) {
     const postIndex = posts.findIndex(post => post.id === id);
     if (postIndex === -1) {
         sendResponse(res, { status: statusNotFound });
@@ -59,7 +59,7 @@ function hasPost(id) {
     return postIndex;
 }
 
-function hasContent(params) {
+function getContent(params) {
     if (!params.has('content')) {
         sendResponse(res, { status: statusBadRequest });
         return;
@@ -74,7 +74,7 @@ function hasContent(params) {
     return content;
 }
 
-function hasId(params) {
+function getId(params) {
     if (!params.has('id')) {
         sendResponse(res, { status: statusBadRequest });
         return;
