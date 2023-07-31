@@ -14,27 +14,14 @@ methods.set('/posts.get', function ({ res }) {
     sendJSON(res, posts);
 });
 methods.set('/posts.getById', function ({ res, searchParams }) {
-    const id = Number(searchParams.get('id'));
-    if (Number.isNaN(id)) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
+    const id = hasId(searchParams);
+    const postIndex = hasPost(id);
 
-    const foundPost = posts.find(post => post.id === id);
-    if (!foundPost) {
-        sendResponse(res, { status: statusNotFound });
-        return;
-    }
-
-    sendJSON(res, foundPost);
+    sendJSON(res, posts[postIndex]);
 });
 methods.set('/posts.post', function ({ res, searchParams }) {
-    if (!searchParams.has('content')) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
+    const content = hasContent(searchParams);
 
-    const content = searchParams.get('content');
     const post = {
         id: nextId++,
         content: content,
@@ -45,51 +32,62 @@ methods.set('/posts.post', function ({ res, searchParams }) {
     sendJSON(res, post);
 });
 methods.set('/posts.edit', function ({ res, searchParams }) {
-    if (!searchParams.has('id') || !searchParams.has('content')) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
-
-    const id = Number(searchParams.get('id'));
-    const newContent = searchParams.get('content');
-
-    if (Number.isNaN(id) || !newContent) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
-
-    const postIndex = posts.findIndex(post => post.id === id);
-
-    if (postIndex === -1) {
-        sendResponse(res, { status: statusNotFound });
-        return;
-    }
+    const id = hasId(searchParams);
+    const newContent = hasContent(searchParams);
+    const postIndex = hasPost(id);
 
     posts[postIndex].content = newContent;
     sendJSON(res, posts[postIndex]);
 });
 methods.set('/posts.delete', function ({ res, searchParams }) {
-    if (!searchParams.has('id')) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
+    const id = hasId(searchParams);
+    const postIndex = hasPost(id);
 
-    const id = Number(searchParams.get('id'));
-    if (Number.isNaN(id)) {
-        sendResponse(res, { status: statusBadRequest });
-        return;
-    }
+    const deletedPost = posts[postIndex];
+    posts.splice(postIndex, 1);
 
+    sendJSON(res, deletedPost);
+});
+
+function hasPost(id) {
     const postIndex = posts.findIndex(post => post.id === id);
     if (postIndex === -1) {
         sendResponse(res, { status: statusNotFound });
         return;
     }
 
-    const deletedPost = posts[postIndex];
-    posts.splice(postIndex, 1);
-    sendJSON(res, deletedPost);
-});
+    return postIndex;
+}
+
+function hasContent(params) {
+    if (!params.has('content')) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const content = params.get('content');
+    if (!content) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    return content;
+}
+
+function hasId(params) {
+    if (!params.has('id')) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const id = Number(params.get('id'));
+    if (Number.isNaN(id)) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    return id;
+}
 
 function sendResponse(res, { status = statusOk, headers = {}, body = null }) {
     Object.entries(headers).forEach(function ([key, value]) {
