@@ -68,7 +68,28 @@ methods.set('/posts.edit', function ({ res, searchParams }) {
     posts[postIndex].content = newContent;
     sendJSON(res, posts[postIndex]);
 });
-methods.set('/posts.delete', function () { });
+methods.set('/posts.delete', function ({ res, searchParams }) {
+    if (!searchParams.has('id')) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const id = Number(searchParams.get('id'));
+    if (Number.isNaN(id)) {
+        sendResponse(res, { status: statusBadRequest });
+        return;
+    }
+
+    const postIndex = posts.findIndex(post => post.id === id);
+    if (postIndex === -1) {
+        sendResponse(res, { status: statusNotFound });
+        return;
+    }
+
+    const deletedPost = posts[postIndex];
+    posts.splice(postIndex, 1);
+    sendJSON(res, deletedPost);
+});
 
 function sendResponse(res, { status = statusOk, headers = {}, body = null }) {
     Object.entries(headers).forEach(function ([key, value]) {
